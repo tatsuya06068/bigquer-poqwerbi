@@ -1,0 +1,47 @@
+Resources:
+  # RDSインスタンス
+  MyRDSInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: my-rds-instance
+      AllocatedStorage: 20
+      DBInstanceClass: db.t3.medium
+      Engine: mysql
+      MasterUsername: admin
+      MasterUserPassword: password
+      BackupRetentionPeriod: 7
+
+  # S3バケット（データ保存先）
+  MyS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: my-glue-output-bucket
+
+  # Glueジョブ（ETL）
+  MyGlueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: MyETLJob
+      Role: arn:aws:iam::123456789012:role/AWSGlueServiceRole
+      Command:
+        Name: glueetl
+        ScriptLocation: s3://my-bucket/scripts/my-etl-script.py
+      DefaultArguments:
+        --TempDir: s3://my-bucket/temp/
+        --connection-options: "connection_type=JDBC,connection_options=JDBCConnectionString"
+      MaxCapacity: 10
+      Connections: 
+        - "my-jdbc-connection"
+        
+  # Glue接続（JDBC接続）
+  MyJDBCConnection:
+    Type: AWS::Glue::Connection
+    Properties:
+      ConnectionInput:
+        Name: my-jdbc-connection
+        ConnectionType: JDBC
+        ConnectionProperties:
+          JDBC_CONNECTION_URL: jdbc:mysql://my-rds-instance:3306/mydb
+          USERNAME: admin
+          PASSWORD: password
+
