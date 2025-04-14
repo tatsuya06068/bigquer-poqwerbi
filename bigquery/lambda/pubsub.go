@@ -4,32 +4,35 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/pubsub"
 	"google.golang.org/api/option"
-	"google.golang.org/genproto/googleapis/cloud/storage/v1"
+	"google.golang.org/api/storage/v1"
 )
+
+// Pub/Subメッセージの構造体
+type PubSubMessage struct {
+	Bucket string `json:"bucket"`
+	Name   string `json:"name"`
+}
 
 func handlePubSubMessage(ctx context.Context, m *pubsub.Message) error {
 	// Pub/Subメッセージからファイルの詳細情報を取得
-	var fileDetails struct {
-		Bucket string `json:"bucket"`
-		Name   string `json:"name"`
-	}
-
+	var fileDetails PubSubMessage
 	if err := json.Unmarshal(m.Data, &fileDetails); err != nil {
 		log.Printf("Error unmarshalling PubSub message: %v", err)
 		return err
 	}
 
-	// BigQueryの設定
-	projectID := "YOUR_PROJECT_ID"
-	datasetID := "YOUR_BIGQUERY_DATASET"
-	tableID := "YOUR_BIGQUERY_TABLE"
+	// ここでスナップショットから特定のテーブルを抽出する処理を追加する
+	// 例えば、SQLを使ってRDSから直接特定のテーブルを選択する処理を行う
 
-	// GCSからBigQueryにデータをインポート
-	err := loadDataToBigQuery(ctx, projectID, datasetID, tableID, fileDetails.Bucket, fileDetails.Name)
+	tableID := "your_table_name" // 抽出したいテーブル名を指定
+
+	// BigQueryのインポート処理
+	err := loadDataToBigQuery(ctx, "YOUR_PROJECT_ID", "YOUR_BIGQUERY_DATASET", tableID, fileDetails.Bucket, fileDetails.Name)
 	if err != nil {
 		log.Printf("Failed to load data to BigQuery: %v", err)
 		return err
@@ -38,7 +41,7 @@ func handlePubSubMessage(ctx context.Context, m *pubsub.Message) error {
 	return nil
 }
 
-// BigQueryにデータをロードする
+// BigQueryにデータをインポートする
 func loadDataToBigQuery(ctx context.Context, projectID, datasetID, tableID, bucket, object string) error {
 	client, err := bigquery.NewClient(ctx, projectID, option.WithCredentialsFile("path/to/credentials.json"))
 	if err != nil {
