@@ -19,3 +19,5 @@ Power BI Service（オンライン）に発行
 Office365 アカウントで共有（組織内共有・特定ユーザー指定）
 
 🛡️ → Microsoftアカウントのみアクセス可なのでセキュリティ高い
+
+https://learn.microsoft.com/ja-jp/power-query/connectors/google-bigquery
