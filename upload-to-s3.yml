@@ -1,9 +1,15 @@
 name: Upload to S3 (Directory-Based)
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Choose environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - prod
+          - stg
 
 jobs:
   upload:
@@ -13,18 +19,37 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v3
 
+      # 環境によってアップロード先を切り替える
+      - name: Set up AWS credentials for prod
+        if: ${{ github.event.inputs.environment == 'prod' }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          AWS_REGION: ap-northeast-1
+        run: |
+          echo "AWS Credentials for prod are set."
+
+      - name: Set up AWS credentials for stg
+        if: ${{ github.event.inputs.environment == 'stg' }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_STG }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_STG }}
+          AWS_REGION: ap-northeast-1
+        run: |
+          echo "AWS Credentials for stg are set."
+
       # public ディレクトリをアップロード
       - name: Upload public directory to S3
         uses: jakejarvis/s3-sync-action@v0.5.1
         with:
           args: --acl public-read --delete
         env:
-          AWS_S3_BUCKET: my-s3-bucket
+          AWS_S3_BUCKET: ${{ github.event.inputs.environment == 'prod' && 'my-s3-prod-bucket' || 'my-s3-stg-bucket' }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ap-northeast-1  # 東京リージョンなど
+          AWS_REGION: ap-northeast-1
           SOURCE_DIR: public
-          DEST_DIR: public  # S3内でのアップロード先パス
+          DEST_DIR: public
 
       # assets ディレクトリをアップロード
       - name: Upload assets directory to S3
@@ -32,12 +57,12 @@ jobs:
         with:
           args: --acl public-read --delete
         env:
-          AWS_S3_BUCKET: my-s3-bucket
+          AWS_S3_BUCKET: ${{ github.event.inputs.environment == 'prod' && 'my-s3-prod-bucket' || 'my-s3-stg-bucket' }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ap-northeast-1
           SOURCE_DIR: assets
-          DEST_DIR: assets  # S3内でのアップロード先パス
+          DEST_DIR: assets
 
 
 # この例では、public/ ディレクトリ内のファイルを s3://my-s3-bucket/public/ にアップロードし、assets/ ディレクトリ内のファイルを s3://my-s3-bucket/assets/ にアップロードする構成です。
