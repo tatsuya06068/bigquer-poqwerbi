@@ -1,0 +1,65 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Glue Job Resources for Cross-Stack Reference
+
+Parameters:
+  GlueJobName:
+    Type: String
+    Default: ExportMultipleTablesJob
+  GlueScriptPath:
+    Type: String
+    Description: S3 path to the Glue script (e.g., s3://my-bucket/scripts/export_tables.py)
+  GlueDatabase:
+    Type: String
+    Description: Glue Catalog database name
+  GlueTables:
+    Type: String
+    Description: Comma-separated table names (e.g., table1,table2,table3)
+  S3OutputPath:
+    Type: String
+    Description: S3 path to export CSVs to (e.g., s3://my-bucket/output/)
+
+Resources:
+  GlueJobRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub glue-execution-role-${GlueJobName}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: glue.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+  GlueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: !Ref GlueJobName
+      Role: !GetAtt GlueJobRole.Arn
+      Command:
+        Name: glueetl
+        ScriptLocation: !Ref GlueScriptPath
+        PythonVersion: "3"
+      DefaultArguments:
+        "--database": !Ref GlueDatabase
+        "--tables": !Ref GlueTables
+        "--s3_output_path": !Ref S3OutputPath
+        "--job-language": "python"
+        "--TempDir": !Sub s3://aws-glue-temporary-${AWS::AccountId}/temp/
+      GlueVersion: "3.0"
+      MaxRetries: 0
+      NumberOfWorkers: 2
+      WorkerType: G.1X
+
+Outputs:
+  GlueJobName:
+    Value: !Ref GlueJob
+    Export:
+      Name: !Sub "${AWS::StackName}-GlueJobName"
+  GlueJobRoleArn:
+    Value: !GetAtt GlueJobRole.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-GlueJobRoleArn"

@@ -1,0 +1,19 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Glue Job Trigger for Cross-Stack Reference
+
+Parameters:
+  CronSchedule:
+    Type: String
+    Default: cron(0 2 * * ? *)
+    Description: Cron expression for scheduling (default: 2:00 UTC daily)
+
+Resources:
+  GlueJobTrigger:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Name: !Sub glue-trigger-${GlueJobName}
+      Type: SCHEDULED
+      Schedule: !Ref CronSchedule
+      Actions:
+        - JobName: !ImportValue GlueJobName
+      StartOnCreation: true

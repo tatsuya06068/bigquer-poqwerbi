@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Lambda (Go) triggered by S3 using Amazon Linux 2023
+
+Parameters:
+  CodeS3Bucket:
+    Type: String
+    Description: S3 bucket where the Go Lambda binary is stored
+  CodeS3Key:
+    Type: String
+    Description: S3 key for the Go Lambda binary (e.g., lambda/main.zip)
+
+Resources:
+  # S3 バケット
+  UploadBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function: !GetAtt UploadHandlerFunction.Arn
+
+  # Lambda 実行 IAM ロール
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: lambda-go-execution-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  # Lambda (Go + Amazon Linux 2023)
+  UploadHandlerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: GoS3UploadHandler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: provided.al2023
+      Handler: bootstrap
+      Timeout: 30
+      Code:
+        S3Bucket: !Ref CodeS3Bucket
+        S3Key: !Ref CodeS3Key
+
+  # S3 からの Lambda 実行を許可
+  S3InvokeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref UploadHandlerFunction
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !GetAtt UploadBucket.Arn
