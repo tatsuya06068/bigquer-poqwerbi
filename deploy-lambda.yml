@@ -1,0 +1,52 @@
+name: Deploy Go Lambda (Manual Select)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Select environment'
+        required: true
+        type: choice
+        options:
+          - dev
+          - stg
+          - prod
+      function:
+        description: 'Select Lambda function name'
+        required: true
+        type: choice
+        options:
+          - user-handler
+          - order-processor
+          - payment-service
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Build Lambda binary
+        run: |
+          GOOS=linux GOARCH=amd64 go build -o main ./cmd/${{ github.event.inputs.function }}
+          zip function.zip main
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets[format('AWS_ACCESS_KEY_ID_{0}', github.event.inputs.environment | upper)] }}
+          aws-secret-access-key: ${{ secrets[format('AWS_SECRET_ACCESS_KEY_{0}', github.event.inputs.environment | upper)] }}
+          aws-region: ap-northeast-1
+
+      - name: Deploy to Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ github.event.inputs.function }}-${{ github.event.inputs.environment }} \
+            --zip-file fileb://function.zip
