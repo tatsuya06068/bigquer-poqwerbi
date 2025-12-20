@@ -1,10 +1,12 @@
 - 開発環境
   - アプリケーション
-   - Docker 
-   - vscode
-   - API: Go
-   - FRONT: Next.js
-   - API通信方式: gRPC,REST
+     - Docker ：開発環境作成するため
+     - vscode　:コーディング
+     - API: Go
+     - FRONT: Next.js
+     - API通信方式: gRPC,REST
+     - HRBC（PORTERS）：求人や求職者情報を保存しているsaasのサービス
+         - URL
 
 - 本番環境
   - AWS
